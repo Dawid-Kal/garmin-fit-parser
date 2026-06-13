@@ -25,8 +25,8 @@ def wyswietl_wszystko(file_path: str) -> None:
             for data in message:
 
                 jednostka = f"{data.units}" if data.units else ""
-                print(f"{data.name}: {data.value}{jednostka}")
                 # Wypisuje atrybuty obiektu - nazwę, wartość oraz jednostkę (jeśli istnieje)
+                print(f"{data.name}: {data.value}{jednostka}")
         print("-" * 50)
     except FileNotFoundError:
 
