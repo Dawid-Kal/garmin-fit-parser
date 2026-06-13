@@ -1,71 +1,53 @@
 import fitparse
-# ściągam bibliotekę, aby móc pracować z plikiem fit w pythonie
-# ma ona też wbudowaną oficjalną bazę danych od garmina
+
+# Ścieżka relatywna zapewnia przenośność skryptu między środowiskami
+file_path = r"Trening.fit"
 
 
-nazwa = r"Trening.fit"
-# ścieżka względna zapewnia przenośność - zadziała na każdym komputerze, który posiada plik Trening.fit
+# Dekoduje binarny plik FIT i wypisuje jego pełną zawartość na ekranie
+def wyswietl_wszystko(file_path: str) -> None:
 
-# literka r, szczególnie potrzebna przy ścieżkach bezwzględnych, np: "C:\trening...", oznacza że to będzie tzw. raw string
-# daje gwarancję poprawnego zinterpretowania tytułu pliku -> \n oraz \t nie zostaną odczytane jako nowa linijka, tabulator
-
-
-def wyswietl_wszystko():
-    # wyświetli całą zawartość pliku fit
-
+    # Implementuje bezpieczną obsługę błędów wejścia/wyjścia (I/O)
+    # zgodnie z zasadami programowania defensywnego
     try:
-        # Defensywne programowanie (Defensive Programming): zabezpieczenie operacji I/O (Wejście/Wyjście)
-        # przed niekontrolowanym przerwaniem działania aplikacji (Crash)
 
-        fit_file = fitparse.FitFile(nazwa)
-        # Służy do załadowania, odkodowania i przetłumaczenia (deserializacji) binarnego pliku z zegarka na czytelne dla Pythona obiekty
-
-        # Dzięki temu fit_file to inteligentny obiekt klasy Fitfile, który trzyma dane
-        # Daje on gotowe funkcje (metody) i można na nim działać
+        # Deserializacja binarnego formatu FIT do obiektów Pythona
+        fit_file = fitparse.FitFile(file_path)
 
         for msg_idx, message in enumerate(fit_file.get_messages()):
-            # Pętla produkująca obiekty w klasie FitMessage za pomocą metody .get_messages()
 
-            # Dzięki enumarate dostajemy indeks (msg_idx) oraz jego zawartość (message)
-
+            # Wypisanie numer indeksu, jego zawartości oraz identyfikatora wiadomości z nagłówka (jeśli istnieje)
             print(
                 f"[KOMUNIKAT #{msg_idx}] TYP: {message.name.upper()} (ID: {message.header.local_mesg_num if hasattr(message, 'header') else 'brak'})"
-                # Dostaję indeks oraz typ (dzięki .name, bez niego bym dostał np. <FitMessage: record>)
-                # Za pomocą if hasattr sprawdzam czy message posiada atrybut obiektu - header (nagłówek) -> jeśli tak to wypisuję zapisaną w nim liczbę (lokalną), a jak nie to 'brak'
             )
 
+            # Iteracja po polach (FieldData) pojedynczej instancji klasy FitMessage
             for data in message:
-                # Data to obiekt klasy FieldData
-                # Chodzę po wszystkich polach danej (jednej) instancji klasy FitMessage
 
                 jednostka = f"{data.units}" if data.units else ""
                 print(f"{data.name}: {data.value}{jednostka}")
                 # Wypisuje atrybuty obiektu - nazwę, wartość oraz jednostkę (jeśli istnieje)
         print("-" * 50)
     except FileNotFoundError:
-        # Pliku w ogóle nie ma
 
-        print(f"[BŁĄD UŻYTKOWNIKA]: Nie znaleziono pliku '{nazwa}' w folderze.")
+        print(f"[BŁĄD I/O]: Plik '{file_path}' nie istnieje w podanej ścieżce.")
 
     except PermissionError:
-        # Plik jest ale system go zablokował
 
-        print(f"[BŁĄD SYSTEMOWY]: Brak uprawnień do pliku '{nazwa}'.")
-        print("Upewnij się, że plik nie jest otwarty w innym programie!")
+        print(
+            f"[BŁĄD SYSTEMOWY]: Brak uprawnień do odczytu pliku '{file_path}'. "
+            "Upewnij się, że plik nie jest zablokowany przez inny proces. "
+        )
+
+    except fitparse.FitParseError as error:
+        print(f"[BŁĄD PARSOWANIA]: Plik FIT jest uszkodzony: {error}")
 
     except Exception as error:
-        # Wszystkie inne awarie, błędy
-        # Error to nazwa błędu
 
-        print(f"[BŁĄD KRYTYCZNY]: Wystąpił błąd podczas zrzutu: {error}")
-
+        print(
+            f"[BŁĄD KRYTYCZNY]: Nieoczekiwany wyjątek podczas przetwarzania danych: {error}"
+        )
 
 if __name__ == "__main__":
-    # Punkt wejścia do aplikacji - kod poniżej wykona się tylko wtedy, gdy plik zostanie uruchomiony jako skrypt główny (bezpośrednio), np. przez Run
-    # Jeśli np. w innym programie zaimportuję odczyt_garmina, to wykona się tylko to co powyżej oraz poniżej ifa (np. tu funkcję załaduje ale jej nie wykona)
-    # Stosuj gdy kod będzie używany w innym programie, bądź przez inną osobę
-
-    wyswietl_wszystko()
-
-# produkuję obiekt klasy Fitfile (cały jakby przedeserializowany plik fit)
-# potem, za pomocą pętli for, produkuję obiekty klasy FitMessage, nazwane u mnie jako message, a potem chodzę po nich pętlą for; a instancje klasy FieldData nazywam data
+    # Punkt wejścia zapobiega automatycznemu uruchomieniu logiki przy importowaniu modułu
+    wyswietl_wszystko(file_path)
