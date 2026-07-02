@@ -25,5 +25,5 @@ class TrainingAnalyzer:
             
             return int(total_seconds)
             
-        except (ValueError, IndexError):
+        except ValueError:
             raise ValueError("Invalid time format. Expected HH:MM:SS.")
