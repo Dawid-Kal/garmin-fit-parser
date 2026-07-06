@@ -20,9 +20,14 @@ def analyzer():
         ("  0:19:30  ", 1170),  # Verifies whitespace stripping
     ]
 )
-def test_parse_time_to_seconds_success(analyzer, time_str, expected_seconds):
+def test_parse_time_to_seconds_success(
+    analyzer: TrainingAnalyzer,
+    time_str: str, 
+    expected_seconds: int
+) -> None:
     """Test that valid time formats and edge cases convert correctly to seconds."""
-    assert analyzer.parse_time_to_seconds(time_str) == expected_seconds
+    result = analyzer.parse_time_to_seconds(time_str)
+    assert result == expected_seconds
 
 
 @pytest.mark.parametrize(
@@ -39,7 +44,10 @@ def test_parse_time_to_seconds_success(analyzer, time_str, expected_seconds):
         "0:-10:00",
     ]
 )
-def test_parse_time_to_seconds_raises_error(analyzer, invalid_time_str):
+def test_parse_time_to_seconds_raises_error(
+    analyzer: TrainingAnalyzer, 
+    invalid_time_str: str
+) -> None:
     """Test that invalid inputs raise ValueError with a matching user-facing message."""
     expected_error_msg = "Invalid time format. Expected HH:MM:SS."
     
@@ -84,20 +92,10 @@ def test_determine_runner_profile_valid_cases(
     assert result == expected_profile
 
 
-@pytest.mark.parametrize(
-    "distance_meters, time_input",
-    [
-        (None, None)
-    ]
-)
-def test_determine_runner_profile_missing_input_returns_amateur_fallback(
-    analyzer: TrainingAnalyzer,
-    distance_meters: None,
-    time_input: None
-) -> None:
+def test_determine_runner_profile_missing_input(analyzer: TrainingAnalyzer) -> None:
     """Verify that missing inputs fallback safely to the default amateur profile."""
     expected_fallback = RunnerProfile(runner_profile="amateur", max_jogging_speed=3.51)
-    result = analyzer.determine_runner_profile(distance_meters, time_input)
+    result = analyzer.determine_runner_profile(None, None)
     assert result == expected_fallback
 
 
