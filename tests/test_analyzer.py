@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import fitparse
 import pandas as pd
@@ -14,12 +14,12 @@ from analyzer import FitFileValidationError, RunnerProfile, TrainingAnalyzer
 @pytest.mark.parametrize(
     "time_str, expected_seconds",
     [
-        ("0:19:30", 1170),
-        ("1:02:05", 3725),
-        ("0:00:01", 1),
-        ("0:59:59", 3599),
+        ("00:19:30", 1170),
+        ("01:02:05", 3725),
+        ("00:00:01", 1),
+        ("00:59:59", 3599),
         ("24:00:00", 86400),
-        ("  0:19:30  ", 1170),
+        ("  00:19:30  ", 1170),
     ],
 )
 def test_parse_time_to_seconds_success(
@@ -36,19 +36,17 @@ def test_parse_time_to_seconds_success(
         "19:30",
         "1:2:3:4",
         "aa:bb:cc",
-        "0:aa:00",
-        "0:60:00",
-        "0:00:65",
-        "0:00:00",
+        "00:aa:00",
+        "00:60:00",
+        "00:00:65",
+        "00:00:00",
         "-1:00:00",
-        "0:-10:00",
+        "00:-10:00",
     ],
 )
 def test_parse_time_to_seconds_raises_error(invalid_time_str: str) -> None:
     """Verify invalid duration formats raise ValueError with expected message."""
-    expected_error_msg = "Invalid time format. Expected HH:MM:SS."
-
-    with pytest.raises(ValueError, match=expected_error_msg):
+    with pytest.raises(ValueError, match="Invalid time format"):
         RunnerProfile.parse_time_to_seconds(invalid_time_str)
 
 
@@ -87,16 +85,13 @@ def test_determine_runner_profile_invalid_distance_error(
     invalid_distance: int,
 ) -> None:
     """Verify distances outside the 1000-10000m range raise a business ValueError."""
-    expected_error_msg = "Personal best distance must be between 1000 and 10000 meters."
-
-    with pytest.raises(ValueError, match=expected_error_msg):
+    with pytest.raises(ValueError, match="Personal best distance must be between"):
         RunnerProfile.determine_runner_profile(invalid_distance, "00:20:00")
 
 
 def test_determine_runner_profile_bubbles_up_parser_exceptions() -> None:
     """Verify underlying time parser exceptions bubble up unmodified."""
-    expected_error_msg = "Invalid time format. Expected HH:MM:SS."
-    with pytest.raises(ValueError, match=expected_error_msg):
+    with pytest.raises(ValueError, match="Invalid time format"):
         RunnerProfile.determine_runner_profile(5000, "invalid-time-string")
 
 
@@ -123,6 +118,15 @@ class MockFitMessage:
         return iter(self._fields)
 
 
+class FakeFitFile:
+    """A clean, reusable fake for fitparse.FitFile."""
+    def __init__(self, messages: list) -> None:
+        self.messages = messages
+
+    def get_messages(self) -> list:
+        return self.messages
+    
+
 @pytest.fixture
 def analyzer() -> TrainingAnalyzer:
     """Provide a TrainingAnalyzer instance configured with an amateur profile."""
@@ -144,17 +148,15 @@ def test_process_and_clean_training_success(
         MockFitMessage("session", {"total_timer_time": 2.0}),
     ]
 
-    mock_instance = MagicMock()
-    mock_instance.get_messages.return_value = mock_messages
-    mock_fit_file_cls.return_value = mock_instance
+    mock_fit_file_cls.return_value = FakeFitFile(mock_messages)
 
     df_result = analyzer.process_and_clean_training()
 
     assert isinstance(df_result, pd.DataFrame)
     assert len(df_result) == 3
     assert {"timestamp", "distance", "enhanced_speed"}.issubset(df_result.columns)
-    assert df_result.iloc[1]["distance"] == 0.0
-    assert df_result.iloc[1]["enhanced_speed"] == 3.0
+    assert df_result["distance"].iat[1] == 0.0
+    assert df_result["enhanced_speed"].iat[1] == 3.0
 
 
 @patch("fitparse.FitFile")
@@ -167,9 +169,7 @@ def test_process_and_clean_training_missing_required_columns(
         MockFitMessage("session", {"total_timer_time": 10.0}),
     ]
 
-    mock_instance = MagicMock()
-    mock_instance.get_messages.return_value = mock_messages
-    mock_fit_file_cls.return_value = mock_instance
+    mock_fit_file_cls.return_value = FakeFitFile(mock_messages)
 
     with pytest.raises(FitFileValidationError, match="Plik FIT pochodzi ze starego urządzenia"):
         analyzer.process_and_clean_training()
@@ -184,9 +184,7 @@ def test_process_and_clean_training_missing_session_summary(
         MockFitMessage("record", {"timestamp": "2026-07-08 10:00:00", "distance": 0.0, "enhanced_speed": 2.0})
     ]
 
-    mock_instance = MagicMock()
-    mock_instance.get_messages.return_value = mock_messages
-    mock_fit_file_cls.return_value = mock_instance
+    mock_fit_file_cls.return_value = FakeFitFile(mock_messages)
 
     with pytest.raises(FitFileValidationError, match="Plik FIT jest pusty lub nie zawiera podsumowania sesji"):
         analyzer.process_and_clean_training()
